@@ -2,20 +2,17 @@
 
 namespace ChatRoom.Server.Middleware
 {
-    // You may need to install the Microsoft.AspNetCore.Http.Abstractions package into your project
     public class ChatRoomWebSocketMiddleware
     {
         private const string WEB_SOCKET_PATH = "/ws";
         private readonly RequestDelegate _next;
-        private readonly WebSocketHandler _webSocketHandler;
 
-        public ChatRoomWebSocketMiddleware(RequestDelegate next, WebSocketHandler webSocketHandler)
+        public ChatRoomWebSocketMiddleware(RequestDelegate next)
         {
             _next = next;
-            _webSocketHandler = webSocketHandler;
         }
 
-        public async Task Invoke(HttpContext httpContext)
+        public async Task Invoke(HttpContext httpContext, WebSocketHandler webSocketHandler)
         {
             if (httpContext.Request.Path != WEB_SOCKET_PATH)
             {
@@ -30,25 +27,25 @@ namespace ChatRoom.Server.Middleware
             }
 
             using var webSocket = await httpContext.WebSockets.AcceptWebSocketAsync();
-            await _webSocketHandler.OnConnectedAsync(webSocket);
+            await webSocketHandler.OnConnectedAsync(webSocket);
 
-            await Receive(webSocket);
+            await Receive(webSocket, webSocketHandler);
         }
 
-        private async Task Receive(WebSocket webSocket)
+        private static async Task Receive(WebSocket webSocket, WebSocketHandler webSocketHandler)
         {
             var buffer = new byte[1024 * 4];
             var webSocketReceiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
             while (webSocketReceiveResult.MessageType != WebSocketMessageType.Close)
             {
-                await _webSocketHandler.OnReceivedAsync(webSocket, webSocketReceiveResult, buffer);
+                await webSocketHandler.OnReceivedAsync(webSocket, webSocketReceiveResult, buffer);
 
                 webSocketReceiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
             }
 
             await webSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Closed by the client.", CancellationToken.None);
-            await _webSocketHandler.OnClosedAsync(webSocket);
+            await webSocketHandler.OnClosedAsync(webSocket);
         }
     }
 }

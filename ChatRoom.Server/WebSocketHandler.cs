@@ -9,22 +9,23 @@ namespace ChatRoom.Server
     public class WebSocketHandler
     {
         private readonly IUserService _userService;
-        private readonly IRoomService _roomService;
+        private readonly ICommandService _commandService;
 
-        public WebSocketHandler(IUserService userService, IRoomService roomService)
+        public WebSocketHandler(IUserService userService, ICommandService commandService)
         {
             _userService = userService;
-            _roomService = roomService;
-        }
-        public Task OnClosedAsync(WebSocket webSocket)
-        {
-            _userService.RemoveAsync(webSocket);
-            return Task.CompletedTask;
+            _commandService = commandService;
         }
 
         public Task OnConnectedAsync(WebSocket webSocket)
         {
             _userService.CreateAsync(webSocket);
+            return Task.CompletedTask;
+        }
+
+        public Task OnClosedAsync(WebSocket webSocket)
+        {
+            _userService.RemoveAsync(webSocket);
             return Task.CompletedTask;
         }
 
@@ -49,75 +50,20 @@ namespace ChatRoom.Server
             if (chatRoomPayload.Command == Command.EnterRoom)
             {
                 var enterRoomPayload = JsonSerializer.Deserialize<ChatRoomPayloadData<RoomData>>(jsonString);
-                var roomId = enterRoomPayload.Data.RoomId;
-                var user = _userService.Get(webSocket);
-                var users = _roomService.GetUsers(roomId);
-                var enteringMessage = new ChatRoomPayloadData<SendMessageData>
-                {
-                    Command = Command.SendMessage,
-                    Data = new SendMessageData
-                    {
-                        Text = $"{user.Name} entrou na sala.",
-                        RoomId = roomId
-                    }
-                };
-                _roomService.EnterRoom(roomId, user);
-                await SendMessageAsync(users.Select(u => u.WebSocket), enteringMessage);
-            }
-
-            if (chatRoomPayload.Command == Command.LeaveRoom)
-            {
-                var leaveRoomPayload = JsonSerializer.Deserialize<ChatRoomPayloadData<RoomData>>(jsonString);
-                var roomId = leaveRoomPayload.Data.RoomId;
-                var user = _userService.Get(webSocket);
-                var users = _roomService.GetUsers(roomId);
-                var leavingMessage = new ChatRoomPayloadData<SendMessageData>
-                {
-                    Command = Command.SendMessage,
-                    Data = new SendMessageData
-                    {
-                        Text = $"{user.Name} saiu da sala.",
-                        RoomId = roomId
-                    }
-                };
-                _roomService.LeaveRoom(roomId, user);
-                await SendMessageAsync(users.Select(u => u.WebSocket), leavingMessage);
+                await _commandService.EnterRoomAsync(webSocket, enterRoomPayload.Data);
             }
 
             if (chatRoomPayload.Command == Command.SendMessage)
             {
                 var sendMessagePayload = JsonSerializer.Deserialize<ChatRoomPayloadData<SendMessageData>>(jsonString);
-                var roomId = sendMessagePayload.Data.RoomId;
-                var user = _userService.Get(webSocket);
-                var users = _roomService.GetUsers(roomId);
-                var sendMessage = new ChatRoomPayloadData<SendMessageData>
-                {
-                    Command = Command.SendMessage,
-                    Data = new SendMessageData
-                    {
-                        Text = sendMessagePayload.Data.Text,
-                        RoomId = roomId
-                    }
-                };
-                await SendMessageAsync(users.Select(u => u.WebSocket), sendMessage);
+                await _commandService.SendMessageToRoomAsync(webSocket, sendMessagePayload.Data);
             }
-        }
 
-        private Task SendMessageAsync(IEnumerable<WebSocket> webSockets, ChatRoomPayloadData<SendMessageData> message)
-        {
-            return Task.WhenAll(
-                webSockets
-                    .Where(w => w.State == WebSocketState.Open)
-                    .Select(w => SendMessageAsync(w, message))
-            );
-        }
-
-        private async Task SendMessageAsync(WebSocket webSocket, ChatRoomPayloadData<SendMessageData> message)
-        {
-            var jsonString = JsonSerializer.Serialize(message);
-            var encoded = Encoding.UTF8.GetBytes(jsonString);
-            var arraySegment = new ArraySegment<byte>(encoded, offset: 0, count: encoded.Length);
-            await webSocket.SendAsync(arraySegment, WebSocketMessageType.Text, endOfMessage: true, CancellationToken.None);
+            if (chatRoomPayload.Command == Command.LeaveRoom)
+            {
+                var leaveRoomPayload = JsonSerializer.Deserialize<ChatRoomPayloadData<RoomData>>(jsonString);
+                await _commandService.LeaveRoomAsync(webSocket, leaveRoomPayload.Data);
+            }
         }
     }
 }

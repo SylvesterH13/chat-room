@@ -2,8 +2,9 @@
 {
     public enum Command
     {
+        Invalid,
         EnterRoom,
+        SendMessage,
         LeaveRoom,
-        SendMessage
     }
 }
