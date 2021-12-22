@@ -16,6 +16,13 @@ namespace ChatRoom.Server.Services
             _messageService = messageService;
         }
 
+        public Task LoginAsync(WebSocket webSocket, LoginData loginData)
+        {
+            var user = _userService.Get(webSocket);
+            user.Name = loginData.Name;
+            return Task.CompletedTask;
+        }
+
         public async Task EnterRoomAsync(WebSocket webSocket, RoomData roomData)
         {
             var user = _userService.Get(webSocket);

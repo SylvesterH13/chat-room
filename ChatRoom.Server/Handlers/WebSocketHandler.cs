@@ -47,6 +47,12 @@ namespace ChatRoom.Server.Handlers
                 throw new BadHttpRequestException("Message is not in the correct format.");
             }
 
+            if (chatRoomPayload.Command == Command.Login)
+            {
+                var loginPayload = JsonSerializer.Deserialize<ChatRoomPayloadData<LoginData>>(jsonString);
+                await _commandService.LoginAsync(webSocket, loginPayload.Data);
+            }
+
             if (chatRoomPayload.Command == Command.EnterRoom)
             {
                 var enterRoomPayload = JsonSerializer.Deserialize<ChatRoomPayloadData<RoomData>>(jsonString);
