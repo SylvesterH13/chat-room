@@ -4,9 +4,9 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
 
-namespace ChatRoom.Server
+namespace ChatRoom.Server.Handlers
 {
-    public class WebSocketHandler
+    public class WebSocketHandler : IWebSocketHandler
     {
         private readonly IUserService _userService;
         private readonly ICommandService _commandService;

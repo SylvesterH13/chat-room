@@ -1,4 +1,5 @@
-﻿using ChatRoom.Server.Services;
+﻿using ChatRoom.Server.Handlers;
+using ChatRoom.Server.Services;
 
 namespace ChatRoom.Server.Extension
 {
@@ -11,7 +12,7 @@ namespace ChatRoom.Server.Extension
 
             services.AddScoped<IMessageService, MessageService>();
             services.AddScoped<ICommandService, CommandService>();
-            services.AddScoped<WebSocketHandler>();
+            services.AddScoped<IWebSocketHandler, WebSocketHandler>();
         }
     }
 }

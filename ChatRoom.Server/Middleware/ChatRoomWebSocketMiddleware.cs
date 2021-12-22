@@ -1,4 +1,5 @@
-﻿using System.Net.WebSockets;
+﻿using ChatRoom.Server.Handlers;
+using System.Net.WebSockets;
 
 namespace ChatRoom.Server.Middleware
 {
@@ -12,7 +13,7 @@ namespace ChatRoom.Server.Middleware
             _next = next;
         }
 
-        public async Task Invoke(HttpContext httpContext, WebSocketHandler webSocketHandler)
+        public async Task Invoke(HttpContext httpContext, IWebSocketHandler webSocketHandler)
         {
             if (httpContext.Request.Path != WEB_SOCKET_PATH)
             {
@@ -32,7 +33,7 @@ namespace ChatRoom.Server.Middleware
             await Receive(webSocket, webSocketHandler);
         }
 
-        private static async Task Receive(WebSocket webSocket, WebSocketHandler webSocketHandler)
+        private static async Task Receive(WebSocket webSocket, IWebSocketHandler webSocketHandler)
         {
             var buffer = new byte[1024 * 4];
             var webSocketReceiveResult = await webSocket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
